@@ -17,7 +17,7 @@ Version 2.2 is currently latest stable release tested to work in measurement PC:
 Version 2.3 is a development version using PySide6 (Qt6).
 
 <p align="center">
-  <img src="https://github.com/akperuht/PyDAQ/blob/main/doc/main_UI.png" alt="Main UI" width="1000">
+  <img src="https://github.com/akperuht/PyDAQ/blob/main/doc/PyDAQv3_new.png" alt="Main UI" width="1000">
 </p>
 
 <p align="center">
