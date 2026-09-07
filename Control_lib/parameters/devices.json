@@ -1,0 +1,24 @@
+{
+    "devices": {
+        "AVS-47": "avs47_params.json",
+        "Ithaco 1211": "ithaco1211_params.json",
+        "Ithaco 1201": "ithaco1201_params.json",
+        "Basel SP983c": "basel_SP983c_params.json",
+        "Basel SP1004": "basel_SP1004_params.json",
+        "SRS SR560": "SR560_params.json"
+    },
+    "daq_interfaces": {
+        "Ni-DAQ": "nidaqmx_daq_params.json",
+        "AVS-47": "avs47_params.json",
+        "SR860": "SR860_params.json",
+        "SR830": "SR830_params.json",
+        "BF": "BFTC_params.json",
+        "Moku Go": "mokugo_daq_params.json"
+    },
+    "sweep_devices": {
+        "SR860": "SR860_sweep_params.json",
+        "SR830": "SR830_sweep_params.json",
+        "AMI340":"AMI340_sweep_params.json",
+        "BF":"BFTC_sweep_params.json"
+    }
+}

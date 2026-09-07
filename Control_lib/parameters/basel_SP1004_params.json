@@ -1,0 +1,66 @@
+{
+    "Device": "Basel SP1004 LNLD Voltage amplifier ",
+    "Settings": {
+        "Device": {
+            "toDialog": false,
+            "default": "Basel SP1004",
+            "description": "Basel voltage preamplifier"
+        },
+        "Remote": {
+            "toDialog": false,
+            "default": false
+        },
+        "Voltage gain": {
+            "toDialog": true,
+            "default": 100,
+            "values": [
+                100,
+                1000,
+                10000
+            ],
+            "channelgain": true,
+            "type": "QComboBox",
+            "Multiplier": "Divide"
+        },
+        "Filter cut-off": {
+            "toDialog": true,
+            "default": "Measure",
+            "values": [
+                "100 Hz",
+                "300 Hz",
+                "1 kHz",
+                "3 kHz",
+                "10 kHz",
+                "30 kHz",
+                "100 kHz",
+                "1 MHz"
+            ],
+            "type": "QComboBox"
+        },
+        "Coupling": {
+            "toDialog": true,
+            "default": "DC",
+            "values": [
+                "AC (0.03 Hz)",
+                "DC"
+            ],
+            "type": "QComboBox"
+        },
+        "Rin": {
+            "toDialog": true,
+            "default": "∞",
+            "values": [
+                "1 G\u03A9",
+                "\u221E (DC only)",
+                "10 M\u03A9"
+            ],
+            "type": "QComboBox"
+        },
+        "Output unit": {
+            "toDialog": false,
+            "default": "Voltage",
+            "values": [],
+            "type": "QComboBox"
+        }
+    }
+}

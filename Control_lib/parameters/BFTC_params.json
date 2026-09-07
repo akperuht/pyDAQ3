@@ -1,0 +1,35 @@
+{
+  "Device": "Bluefors API temperature control",
+  "Settings": {
+    "Device": {
+      "description": "Bluefors API temperature control",
+      "default": "BF",
+      "toDialog": false
+    },
+    "Remote": {
+      "default": false,
+      "toDialog": false
+    },
+    "Channel": {
+      "default": 0,
+      "values": [
+        "MXC",
+        "Magnet",
+        "Still Flange",
+        "4K Flange",
+        "50K Flange"
+      ],
+      "type": "QComboBox",
+      "toDialog": true
+    },
+            "Acquisition mode": {
+            "toDialog": true,
+            "default": "Continuous",
+            "values": [
+                "Trigger",
+                "Continuous"
+            ],
+            "type": "QComboBox"
+    }
+  }
+}

@@ -1,0 +1,69 @@
+{
+    "Device": "SRS SR860 DSP Lock-in Amplifier",
+    "Settings": {
+        "Device": {
+            "toDialog": false,
+            "default": "SR860",
+            "description": "Stanford Research Systems SR860 Lock-in Amplifier"
+        },
+        "Remote": {
+            "toDialog": false,
+            "default": true
+        },
+        "Connection type": {
+        "default": "GPIB",
+        "values": [
+            "GPIB",
+            "IPv4"
+        ],
+        "type": "QComboBox",
+        "toDialog": false
+        },
+        "GPIB channel": {
+        "default": "TCPIP0::192.168.1.21::inst0::INSTR",
+        "values": [
+            "TCPIP0::192.168.1.21::inst0::INSTR"
+        ],
+        "type": "QComboBox",
+        "toDialog": true
+        },
+        "Parameter to sweep": {
+            "toDialog": true,
+            "default": "DC offset",
+            "values": [
+                "DC offset",
+                "Sine frequency"
+            ],
+            "type": "QComboBox"
+        },
+        "Scan start": {
+            "toDialog": true,
+            "default": 0,
+            "type": "QDoubleSpinBox",
+            "minimum": -100000,
+            "maximum": 100000
+        },
+        "Scan stop": {
+            "toDialog": true,
+            "default": 0,
+            "type": "QDoubleSpinBox",
+            "minimum": -100000,
+            "maximum": 100000
+        },
+        "Points to scan": {
+            "toDialog": true,
+            "default": 1000,
+            "type": "QSpinBox",
+            "minimum": 1,
+            "maximum": 10000000
+        },
+        "Settling time": {
+            "toDialog": true,
+            "default": 0.1,
+            "type": "QDoubleSpinBox",
+            "minimum": 0,
+            "maximum": 10000,
+            "unit":"s"
+        }
+    }
+}

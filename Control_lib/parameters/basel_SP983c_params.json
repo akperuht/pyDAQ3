@@ -1,0 +1,50 @@
+{
+    "Device": "Basel SP983c LNHS I to V converter ",
+    "Settings": {
+        "Device": {
+            "toDialog": false,
+            "default": "Basel SP983c",
+            "description": "Basel current preamplifier"
+        },
+        "Remote": {
+            "toDialog": false,
+            "default": false
+        },
+        "Gain [V/A]": {
+            "toDialog": true,
+            "default": 1e5,
+            "values": [
+                1e5,
+                1e6,
+                1e7,
+                1e8,
+                1e9
+            ],
+            "channelgain": true,
+            "type": "QComboBox",
+            "Multiplier": "Divide"
+        },
+        "Filter cut-off": {
+            "toDialog": true,
+            "default": "Measure",
+            "values": [
+                "30 Hz",
+                "100 Hz",
+                "300 Hz",
+                "1 kHz",
+                "3 kHz",
+                "10 kHz",
+                "30 kHz",
+                "100 kHz",
+                "1 MHz"
+            ],
+            "type": "QComboBox"
+        },
+        "Output unit": {
+            "toDialog": false,
+            "default": "Voltage",
+            "values": [],
+            "type": "QComboBox"
+        }
+    }
+}

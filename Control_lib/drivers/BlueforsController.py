@@ -1,0 +1,1108 @@
+import requests
+import json
+import logging
+from logging.handlers import TimedRotatingFileHandler
+import numpy as np
+from warnings import warn
+from random import randint
+from time import perf_counter
+
+
+class PIDConfigException(Exception):
+    def __init__(self, msg: str):
+        super().__init__(msg)
+
+
+class APIError(Exception):
+    def __init__(self, jsonData: dict):
+        # This is not exactly how described in the API.
+        # Lets see, if it works for you.
+        if "details" in jsonData["error"]:
+            # This assumes we got an details array.
+            details = jsonData["error"]["details"]
+        else:
+            details = [jsonData["error"]]
+        errors = []
+        for entry in details:
+            errors.append(f"Code: {entry['code']}, Reason: {entry['name']}")
+        self._error_messages = errors
+        self.query = jsonData["error"]["query"]
+        self.query_data = jsonData["error"]["query_data"]
+        self.data = jsonData["error"]["data"]
+        message = f"{jsonData['error']['name']}: {jsonData['error']['description']}, due to the following errors{''.join(errors)}"
+        super().__init__(message)
+
+
+class BlueFTController:
+    """
+    A class used to remote control the BlueFors Controller software.
+
+
+    Attributes
+    ----------
+    ip : str
+        The IP address of the BlueFors Controller server.
+    key : str
+        The key used for the requests.
+    port : int
+        The port used for the requests.
+    controller_type : str
+        Choose type of temperature controller from ['Bluefors', 'Lakeshore']
+    mixing_chamber_channel_id : int
+        The channel ID of the mixing chamber.
+    mixing_chamber_heater : str
+        The heater mapping for the mixing chamber.
+    debug : bool
+        A flag used to set the log level.
+    pid_calib_path : str
+        Path to file storing PID calibration table.
+    activate_maxigauge_reading : bool
+        Toggles activation of pressure reading for Pfeiffer Maxigauge units (default is False).
+    emulate : bool
+        Toggles emulation mode, where no actual communication with the control software is taking place.
+
+    Methods
+    -------
+    _setup_logging():
+        Sets up the logger for this class.
+     _load_pid_config():
+        Loads PID calibration from csv file.
+    _handle_status_response(status: str, target: str, set: bool) -> int:
+        Handles possible status values returned from control software.
+    _get_synchronization_status(data: str) -> str:
+        Gets the synchronization status from a data response.
+    _get_value_request(device: str, target: str) -> requests.Response:
+        Gets the values currently in the Controller config for the given device.
+    _get_value_from_data_response(data: str, device: str, target : str) -> Union[float, bool]:
+        Gets the value from a data response.
+    _set_value_request(device: str, target: str, value: float) -> dict:
+        Sets a given target value for a given target device.
+    _apply_values_request(device: str) -> dict:
+        Applies all changed values for the target device to the device.
+    get_channel_data(channel: int, target_value: str) -> dict:
+        Gets the specified data from a given channel.
+    get_channel_temperature(channel: int) -> float:
+        Gets the temperature of the given channel.
+    get_channel_resistance(channel: int) -> float:
+        Gets the resistance of the given channel.
+    get_mxc_temperature() -> float:
+        Gets the temperature of the mixing chamber sensor.
+    get_mxc_resistance() -> float:
+        Gets the resistance of the mixing chamber sensor.
+    get_mxc_heater_value(target: str):
+        Gets the target value of the mixing chamber heater.
+    check_heater_value_synced(target: str) -> bool:
+        Checks if the value of the mixing chamber heater is synced.
+    set_mxc_heater_value(target: str, value) -> bool:
+        Sets the value of the mixing chamber heater.
+    get_mxc_heater_status() -> bool:
+        Gets the status of the mixing chamber heater.
+    set_mxc_heater_status(newStatus: bool) -> bool:
+        Sets the status of the mixing chamber heater.
+    toggle_mxc_heater(status: str) -> bool:
+        Toggles the heater switch.
+    get_mxc_heater_power() -> float:
+        Gets the power of the mixing chamber heater.
+    set_mxc_heater_power(power: float) -> bool:
+        Sets the power of the mixing chamber heater.
+    get_mxc_heater_setpoint() -> float:
+        Gets the setpoint of the mixing chamber heater.
+    set_mxc_heater_setpoint(temperature: float) -> bool:
+        Sets the setpoint of the mixing chamber heater.
+    get_mxc_heater_mode() -> bool:
+        Gets the pid mode of the mixing chamber heater.
+    set_mxc_heater_mode(toggle: bool) -> bool:
+        Sets the pid mode of the mixing chamber heater.
+    get_maxigauge_channel(channel: int) -> float:
+        Reads the pressure gauge of the respective channel in a Pfeiffer Maxigauge unit.
+    """
+
+    def __init__(
+        self,
+        ip: str,
+        key: str = None,
+        port: int = 49098,
+        controller_type: str = "bluefors",
+        mixing_chamber_channel_id: int = None,
+        mixing_chamber_heater_id: int = None,
+        debug: bool = False,
+        pid_calib_path: str = None,
+        activate_maxigauge_reading: bool = False,
+        emulate: bool = False,
+        disable_safety_limit: bool = False,
+    ):
+        """
+        Constructs all the necessary attributes for the BlueFTController object.
+
+        Parameters
+        ----------
+            ip : str
+                The IP address of the BlueFors Controller server.
+            key : str
+                The key used for the requests.
+            port : int
+                The port used for the requests.
+            controller_type : str
+                Choose type of temperature controller from ['Bluefors', 'Lakeshore']
+            mixing_chamber_channel_id : int
+                The channel ID of the mixing chamber.
+            mixing_chamber_heater : str
+                The heater mapping for the mixing chamber.
+            debug : bool
+                A flag used to set the log level.
+            pid_calib_path : str
+                Path to file storing PID calibration table.
+            activate_maxigauge_reading : bool
+                Toggles activation of pressure reading for Pfeiffer Maxigauge units (default is False).
+            emulate : bool
+                Toggles emulation mode, where no actual communication with the control software is taking place.
+            disable_safety_limit : bool, optional
+                Allows to disable all safety limits, for example to apply high mixing chamber temperature setpoints. Defaults to False.
+        """
+        self.ip = ip
+        self.key = key
+        self.port = port
+        self.mixing_chamber_channel_id = mixing_chamber_channel_id
+        self.mixing_chamber_heater_id = mixing_chamber_heater_id
+        self.debug = debug
+        self.pid_config_path = pid_calib_path
+        self._setup_logging()
+        self._has_mxc = True if mixing_chamber_channel_id is not None else False
+        self._valid_pid_config = False
+        self._pid_calib_setpoints = None
+        self._pid_calib_pid = None
+        self._maxigauge_pressure = activate_maxigauge_reading
+        self._emulate = emulate
+        self.disable_safety_limit = disable_safety_limit
+
+        assert controller_type.lower() in [
+            "lakeshore",
+            "bluefors",
+        ], f"Set the type of physical temperature controller used in the system. Only 'Lakeshore' and 'Bluefors' controllers are supported."
+
+        self.controller_type = controller_type
+
+        self.controller_specific_paths = {
+            "bluefors": {
+                "sensor_data": "mapper.temperature_control.sensors.t#",
+                "mxc_heater": "driver.bftc.data.heaters.heater_#",
+                "pid_target": "pid_",
+            },
+            "lakeshore": {
+                "sensor_data": "mapper.temperature_control.sensors.t#",
+                "mxc_heater": "driver.lakeshore.settings.outputs.sample",
+                "pid_target": "",
+            },
+        }
+
+        self.sensor_data_device = self.controller_specific_paths[self.controller_type][
+            "sensor_data"
+        ]
+        self.mxc_heater_device = self.controller_specific_paths[self.controller_type][
+            "mxc_heater"
+        ].replace("#", str(self.mixing_chamber_heater_id))
+        self.pid_target = self.controller_specific_paths[self.controller_type][
+            "pid_target"
+        ]
+
+        self._load_pid_config()
+
+    def _setup_logging(self):
+        """
+        Set up the logger for this class.
+
+        This method creates a logger with the name of the current module and sets the log level based on the `debug` attribute.
+        It also creates a `TimedRotatingFileHandler` that rotates the log file at midnight every day and a formatter that includes the timestamp, log level, function name, line number, and message in each log message.
+        The file handler and formatter are added to the logger.
+
+        """
+        # Create a logger
+        self.logger = logging.getLogger(__name__)
+        log_level = logging.DEBUG if self.debug else logging.INFO
+
+        # Create a file handler and set level to debug
+        file_handler = TimedRotatingFileHandler(
+            "bluefors.log", when="W6", interval=1, backupCount=12, encoding="utf-8"
+        )
+        file_handler.setLevel(log_level)
+
+        # Create a formatter and set the format for log messages
+        file_formatter = logging.Formatter(
+            "%(asctime)s %(levelname)-6s - %(funcName)s() L%(lineno)-4d - %(message)s"
+        )
+        file_handler.setFormatter(file_formatter)
+        # Add the file handler to the logger
+        self.logger.addHandler(file_handler)
+
+        # Add a stream handler to log to console
+        console_formatter = logging.Formatter(
+            "%(asctime)s :-- %(levelname)s --: %(message)s"
+        )
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(console_formatter)
+        console_handler.setLevel(log_level)
+        self.logger.addHandler(console_handler)
+
+        self.logger.setLevel(log_level)
+
+    def _load_pid_config(self):
+        """
+        Loads a PID calibration table from a csv file. Must be formatted with three columns: [setpoint, p, i, d] and one header row.
+        """
+
+        if self.pid_config_path is not None:
+            try:
+                pid_config = np.loadtxt(
+                    self.pid_config_path, dtype="float", delimiter=",", skiprows=1
+                )
+                self._pid_calib_setpoints = pid_config[:, 0]
+                self._pid_calib_pid = pid_config[:, 1:]
+                sortind = np.argsort(self._pid_calib_setpoints)
+                self._pid_calib_setpoints = self._pid_calib_setpoints[sortind]
+                self._pid_calib_pid = self._pid_calib_pid[sortind]
+                self._valid_pid_config = True
+
+                self.logger.info(f"PID calibration loaded from {self.pid_config_path}")
+
+            except FileNotFoundError as ex:
+                warn(
+                    f"Encountered error while loading pid config file: {ex}\nContinuing without automatic PID setpoint parameter adjustment."
+                )
+
+    @staticmethod
+    def _handle_status_response(status: str, target: str, set: bool = False) -> int:
+        """
+        This is a helper function to handle all possible status values returned by the control software.
+
+        Parameters
+        ----------
+        status : str
+            The status value received from the control software.
+        target : str
+            The target name on which the operation was performed.
+        set : bool
+            Toggle whether the status was received during a get or set operation.
+
+        Returns
+        --------
+        value : int
+            Code depending on parsed status value. 'INVALID' and 'DISCONNECTED' return 0. 'CHANGED', SYNCHRONIZED' and 'INDEPENDENT' return 1. 'QUEUED' returns 2. If type casted to bool, all acceptable status values cast to True, others to False.
+        """
+        info = f" raised while setting '{target}'" if set else ""
+
+        if status == "INVALID":
+            print(f"Warning{info}: The target value '{target}' is invalid!")
+            return 0
+
+        elif status == "CHANGED":
+            return 1
+
+        elif status == "DISCONNECTED":
+            print(
+                f"Warning{info}: The target device is disconnected! The target value '{target}' is not valid."
+            )
+            return 0
+
+        elif status == "QUEUED":
+            print(
+                f"Warning{info}: The target value '{target}' has been marked as 'QUEUED' and might not be synchronized between control software and physical device! Verify again."
+            )
+            return 2
+
+        elif status == "SYNCHRONIZED":
+            return 1
+
+        elif status == "INDEPENDENT":
+            return 1
+
+        else:
+            print(
+                f"Warning{info}: Received invalid status response from control software. '{status}' is not a valid status."
+            )
+            return 0
+
+    def _get_value_from_data_response(self, data: str, device: str, target: str):
+        """
+        This is a helper function to get the value from a data response.
+
+        Parameters
+        ----------
+        data : str
+            The data response from which to extract the value.
+        device : str
+            The device identifier used in the data response.
+        target : str
+            The target identifier used in the data response.
+
+        Returns
+        -------
+        value : float or bool
+            The extracted value from the data response. If the synchronization status cannot be verified, returns False.
+
+        Warns
+        ------
+        UserWarning
+            If the synchronization status cannot be verified, a warning is logged.
+
+        """
+        try:
+            self._handle_status_response(
+                status=self._get_synchronization_status(
+                    data, device=device, target=target
+                ),
+                target=target,
+            )
+
+            return data["data"][f"{device}.{target}"]["content"]["latest_valid_value"][
+                "value"
+            ]
+        except:
+            self.logger.warn(f"Could not verify synchronization status")
+            return False
+
+    def _get_synchronization_status(self, data: str, device: str, target: str):
+        """
+        Get the synchronization status from a data response.
+
+        Parameters
+        ----------
+        data : str
+            The data response from which to extract the synchronization status.
+        device : str
+            The device identifier used in the data response.
+        target : str
+            The target identifier used in the data response.
+
+        Returns
+        -------
+        bool
+            True if the data is synchronized, False otherwise or if the synchronization status cannot be verified.
+
+        Warns
+        ------
+        UserWarning
+            If the synchronization status cannot be verified, a warning is logged.
+
+        """
+        try:
+            return data["data"][f"{device}.{target}"]["content"]["latest_valid_value"][
+                "status"
+            ]
+
+        except:
+            self.logger.warning(f"Could not verify synchronization status")
+            return "INVALID"
+
+    # general functions
+    def _get_value_request(self, device: str, target: str):
+        """
+        Get the values currently in the Controller config for the given device.
+
+        Parameters
+        ----------
+        device : str
+            The device identifier used in the request.
+        target : str
+            The target identifier used in the request.
+
+        Raises
+        ------
+        PIDConfigException
+            If no key is provided for the value request.
+
+        Returns
+        -------
+        response : requests.Response
+            The response from the server.
+
+        """
+        if self.key == None:
+            raise PIDConfigException("No key provided for value request.")
+        requestPath = f"https://{self.ip}:{self.port}/values/{device.replace('.', '/')}/{target}/?prettyprint=1&key={self.key}"
+
+        if not self._emulate:
+            self.logger.debug(f"GET: {requestPath}")
+            # Let's see if the request was successful, if not, we return a NaN and logg an error
+            try:
+                response = requests.get(
+                    requestPath, verify=False
+                )  # The server has a self-signed certificate
+                response.raise_for_status()
+            except (
+                requests.exceptions.BaseHTTPError,
+                requests.exceptions.HTTPError,
+                requests.exceptions.ConnectionError,
+            ) as err:
+                self.logger.error(f"Error: {err}")
+                # We return data, that indicates NaN and has an ERROR status (and is also otherwse not valid...)
+                entry = {
+                    "data": {
+                        "content": {
+                            "latest_valid_value": {
+                                "value": float("nan"),
+                                "status": "ERROR",
+                            }
+                        }
+                    }
+                }
+                return entry
+            except Exception as e:
+                print(e)
+                print(type(e))
+                return None
+            # Potentially do some type of processing here, depending on what users want.
+            return response.json()
+
+        else:
+            self.logger.debug(f"EMULATED, GET: {requestPath}")
+            mock_response = {
+                "data": {
+                    f"{device}.{target}": {
+                        "content": {
+                            "latest_valid_value": {
+                                "value": randint(0, 100),
+                                "status": "SYNCHRONIZED",
+                            }
+                        }
+                    }
+                }
+            }
+            self.logger.debug(f"EMULATED, RESPONSE: {mock_response}")
+
+            return mock_response
+
+    def _set_value_request(self, device: str, target: str, value: float):
+        """
+        Set a given target value for a given target device.
+
+        This method sends a POST request to the server to set the value of a target on a device.
+        The request includes a JSON body with the device, target, and value, and the server's response is returned.
+
+        Parameters
+        ----------
+        device : str
+            The device identifier used in the request.
+        target : str
+            The target identifier used in the request.
+        value : float
+            The value to set for the target.
+
+        Raises
+        ------
+        PIDConfigException
+            If no key is provided for the value request.
+
+        Returns
+        -------
+        response : dict
+            The JSON response from the server.
+
+        """
+        if self.key == None:
+            raise PIDConfigException("No key provided for value request.")
+
+        # This is a two step process. First, we need to set the value and then we need to call the setter method.
+        # This is the body for the setting request.
+        request_body = {"data": {f"{device}.{target}": {"content": {"value": value}}}}
+        requestPath = (
+            f"https://{self.ip}:{self.port}/values/?prettyprint=1&key={self.key}"
+        )
+
+        if not self._emulate:
+            self.logger.debug(f"POST: {requestPath} - Body: {request_body}")
+            response = requests.post(
+                requestPath,
+                data=json.dumps(request_body),
+                headers={"Content-Type": "application/json"},
+                verify=False,  # Again, self-signed certificate of the server
+            )
+            response.raise_for_status()
+
+            return response.json()
+
+        else:
+            self.logger.debug(f"EMULATE, POST: {requestPath} - Body: {request_body}")
+
+    def _apply_values_request(self, device: str):
+        """
+        This method applies all changed values for the target device to the device.
+        This is only necessary for some devices, such as the temperature controller,
+        where the control unit does not have direct access to the device, but needs
+        to update configurations
+
+        Raises
+        ------
+        PIDConfigException
+            If no key is provided for the value request.
+
+        Returns
+        -------
+        response : dict
+            The JSON response from the server.
+
+        """
+        if self.key == None:
+            raise PIDConfigException("No key provided for value request.")
+        # Now we need to call the setter method.
+        request_body = {"data": {f"{device}.write": {"content": {"call": 1}}}}
+        requestPath = (
+            f"https://{self.ip}:{self.port}/values/?prettyprint=1&key={self.key}"
+        )
+
+        if not self._emulate:
+            self.logger.debug(f"POST: {requestPath} - Body: {request_body}")
+            response = requests.post(
+                requestPath,
+                data=json.dumps(request_body),
+                headers={"Content-Type": "application/json"},
+                verify=False,
+            )
+            response.raise_for_status()
+
+        else:
+            self.logger.debug(f"EMULATE, POST: {requestPath} - Body: {request_body}")
+
+    def get_channel_data(self, channel: int, target_value: str):
+        """
+        Get the specified data from a given channel
+
+        Parameters
+        ----------
+        channel : int
+            The channel from which to retrieve the data.
+        target_value : str
+            The target value to retrieve from the channel.
+
+        Returns
+        -------
+        response : dict
+            The JSON response from the server.
+
+        Raises
+        ------
+        KeyError
+            If the response does not contain the expected data.
+
+        """
+        device_id = self.sensor_data_device.replace("#", str(channel))
+        self.logger.debug(f"Requesting value: {target_value}  from channel {channel}")
+        data = self._get_value_request(device_id, target_value)
+        try:
+            return self._get_value_from_data_response(
+                data, device=device_id, target=target_value
+            )
+        except KeyError as e:
+            raise APIError(data)
+
+    def get_channel_temperature(self, channel: int) -> float:
+        """
+        Get the temperature of the given channel
+
+        Parameters
+        ----------
+        channel : int
+            The channel from which to retrieve the temperature.
+
+        Returns
+        -------
+        float
+            The temperature of the given channel.
+
+        """
+        return float(self.get_channel_data(channel, "temperature"))
+
+    def get_channel_resistance(self, channel: int) -> float:
+        """
+        Get the temperature of the given channel
+
+        Parameters
+        ----------
+        channel : int
+            The channel from which to retrieve the resistance.
+
+        Returns
+        -------
+        float
+            The resistance of the given channel.
+
+        """
+        return float(self.get_channel_data(channel, "resistance"))
+
+    def get_mxc_temperature(self) -> float:
+        """
+        Get the temperature of the mixing chamber sensor
+
+        Parameters
+        ----------
+        channel : int
+            The channel from which to retrieve the resistance.
+
+        Returns
+        -------
+        float
+            The resistance of the given channel.
+
+        """
+        if self._has_mxc:
+            return self.get_channel_temperature(self.mixing_chamber_channel_id)
+
+        else:
+            raise Exception("Mixing chamber channel ID not configured.")
+
+    def get_mxc_resistance(self) -> float:
+        """
+        Get the resistance of the mixing chamber sensor
+
+        Returns
+        -------
+        float
+            The resistance of the mixing chamber sensor.
+
+        """
+        if self._has_mxc:
+            return self.get_channel_resistance(self.mixing_chamber_channel_id)
+
+        else:
+            raise Exception("Mixing chamber channel ID not configured.")
+
+    def get_mxc_heater_value(self, target: str):
+        """
+        Get the target value of the mixing chamber heater
+
+        Parameters
+        ----------
+        target : str
+            The target value to retrieve from the heater.
+
+        Returns
+        -------
+        float
+            The value of the mixing chamber heater.
+
+        Raises
+        ------
+        KeyError
+            If the response does not contain the expected data.
+
+        """
+        if self._has_mxc:
+
+            data = self._get_value_request(self.mxc_heater_device, target)
+            try:
+                return self._get_value_from_data_response(
+                    data, device=self.mxc_heater_device, target=target
+                )
+            except KeyError as e:
+                raise APIError(data)
+
+        else:
+            raise Exception("Mixing chamber channel ID not configured.")
+
+    def check_heater_value_synced(self, target: str) -> bool:
+        """
+        Check if the value of the mixing chamber heater is synced
+
+        Returns
+        -------
+        bool
+            The synchronization status of the target in the mixing chamber heater.
+
+        """
+        data = self._get_value_request(self.mxc_heater_device, target)
+        try:
+            return bool(
+                self._handle_status_response(
+                    self._get_synchronization_status(
+                        data, device=self.mxc_heater_device, target=target
+                    ),
+                    target=target,
+                    set=True,
+                )
+            )
+
+        except KeyError as e:
+            raise APIError(data)
+
+    def set_mxc_heater_value(self, target: str, value):
+        """
+        Set the value of the mixing chamber heater
+
+        Parameters
+        ----------
+        target : str
+            The target value to retrieve from the heater.
+
+        Returns
+        -------
+        float
+            The value of the mixing chamber heater.
+
+        Raises
+        ------
+        KeyError
+            If the response does not contain the expected data.
+
+        """
+        if self._has_mxc:
+            self.logger.info(f"Mixing Chamber Heater: Setting {target} to {value}")
+            # Set the value
+            self._set_value_request(self.mxc_heater_device, target, value)
+            # Apply the value (otherwise it doesn't get synced to the temperature controller)
+            self.logger.debug(f"Mixing Chamber Heater: Applying settings")
+            self._apply_values_request(self.mxc_heater_device)
+            synced = self.check_heater_value_synced(target)
+            self.logger.info(f"Mixing Chamber Heater: Settings applied and synced")
+            return synced
+
+        else:
+            raise Exception("Mixing chamber channel ID not configured.")
+
+    def get_mxc_heater_status(self) -> bool:
+        """
+        Get the status of the mixing chamber heater
+
+        Returns
+        -------
+        bool
+            The status of the mixing chamber heater. True if the heater is active, False otherwise.
+
+        """
+        if self._has_mxc:
+            return self.get_mxc_heater_value("active") == "1"
+
+        else:
+            raise Exception("Mixing chamber channel ID not configured.")
+
+    def set_mxc_heater_status(self, newStatus: bool) -> bool:
+        """
+        Set the status of the mixing chamber heater
+
+        Parameters
+        ----------
+        newStatus : bool
+            The new status to set for the heater.
+
+        Returns
+        -------
+        bool
+            True if the status was set successfully, False otherwise.
+
+        """
+        if self._has_mxc:
+            newValue = "1" if newStatus else "0"
+            return self.set_mxc_heater_value("active", newValue)
+
+        else:
+            raise Exception("Mixing chamber channel ID not configured.")
+
+    def toggle_mxc_heater(self, status: str) -> bool:
+        """
+        Toggle the heater switch
+
+        Parameters
+        ----------
+        status : str
+            The new status to set for the heater. Must be "on" or "off".
+
+        Returns
+        -------
+        bool
+            True if the status was toggled successfully, False otherwise.
+
+        Raises
+        ------
+        PIDConfigException
+            If an invalid status is provided.
+
+        """
+        if self._has_mxc:
+            if status == "on":
+                newValue = True
+            elif status == "off":
+                newValue = False
+            else:
+                raise PIDConfigException(
+                    "Invalid status provided, must be 'on' or 'off'"
+                )
+            return self.set_mxc_heater_status(newValue)
+
+        else:
+            raise Exception("Mixing chamber channel ID not configured.")
+
+    def get_mxc_heater_power(self) -> float:
+        """
+        Get the power of the mixing chamber heater in microwatts
+
+        Returns
+        -------
+        float
+            The power of the mixing chamber heater.
+
+        """
+        if self._has_mxc:
+            return float(self.get_mxc_heater_value("power")) * 1000000.0
+
+        else:
+            raise Exception("Mixing chamber channel ID not configured.")
+
+    def set_mxc_heater_power(self, power: float) -> bool:
+        """
+        Set the power of the mixing chamber heater
+        The provided power is in microwatts
+
+        Parameters
+        ----------
+        power : float
+            The power to set for the heater.
+
+        Returns
+        -------
+        bool
+            True if the power was set successfully, False otherwise.
+
+        """
+        if self._has_mxc:
+            # Sanity check, should be in microwatts
+            if power < 0 or power > 5000:
+                raise PIDConfigException(
+                    "Power should be in the range of 0 to 5000 microwatts"
+                )
+            return self.set_mxc_heater_value("power", power / 1000000.0)
+
+        else:
+            raise Exception("Mixing chamber channel ID not configured.")
+
+    def get_mxc_heater_setpoint(self) -> float:
+        """
+        Get the setpoint of the mixing chamber heater
+
+        Returns
+        -------
+        float
+            The set point of the mixing chamber heater.
+
+        """
+        if self._has_mxc:
+            return float(self.get_mxc_heater_value("setpoint"))
+
+        else:
+            raise Exception("Mixing chamber channel ID not configured.")
+
+    def set_mxc_heater_setpoint(
+        self, temperature: float, use_pid_calib: bool = True
+    ) -> bool:
+        """
+        Set the setpoint of the mixing chamber heater in milli Kelvin. If a calibration table is given in the constructor and use_pid_calib
+        is true, the PID calibration closest to the desired setpoint will be applied before setting the setpoint.
+
+        Parameters
+        ----------
+        temperature : float
+            The setpoint to set for the heater.
+
+        use_pid_calib : bool, optional
+            Flag to toggle using the PID calibration table (default is True).
+
+        Returns
+        -------
+        bool
+            True if the setpoint was set successfully, False otherwise.
+
+        """
+        if self._has_mxc:
+            if use_pid_calib and self._valid_pid_config:
+                closest = np.argmin(np.abs(self._pid_calib_setpoints - temperature))
+                self.logger.info(
+                    f"Using PID calibration for setpoint {self._pid_calib_setpoints[closest]} mK, closest available calibration to {temperature} mK."
+                )
+                self.set_mxc_heater_pid_config(*self._pid_calib_pid[closest])
+
+            else:
+                warn(
+                    "PID calibration not used, using current PID parameters stored on the device."
+                )
+
+            if temperature >= 500 and not self.disable_safety_limit:
+                raise Exception(
+                    f"Mixing chamber setpoint cannot be over 500 mK. You are trying to set {temperature} mK. You can set disable_safety_limit = True when creating a BlueFTController object to override this."
+                )
+            return self.set_mxc_heater_value("setpoint", temperature * 1e-3)
+
+        else:
+            raise Exception("Mixing chamber channel ID not configured.")
+
+    def get_mxc_heater_mode(self) -> bool:
+        """
+        Get the pid mode of the mixing chamber heater
+
+        Returns
+        -------
+        bool
+            the pid mode of the mixing chamber heater. True if the pid mode is active, False otherwise.
+        """
+        if self._has_mxc:
+            return self.get_mxc_heater_value(f"{self.pid_target}mode") == "1"
+
+        else:
+            raise Exception("Mixing chamber channel ID not configured.")
+
+    def set_mxc_heater_mode(self, toggle: bool) -> bool:
+        """
+        Set the pid mode of the mixing chamber heater
+
+        Parameters
+        ----------
+        toggle : bool
+            The mode to set for the heater.
+
+        Returns
+        -------
+        bool
+            True if the mode was set successfully, False otherwise.
+
+        """
+        if self._has_mxc:
+            newValue = "1" if toggle else "0"
+            return self.set_mxc_heater_value(f"{self.pid_target}mode", newValue)
+
+        else:
+            raise Exception("Mixing chamber channel ID not configured.")
+
+    def get_mxc_heater_pid_config(self) -> list:
+        """
+        Get the pid parameters of the mixing chamber heater.
+
+        Returns
+        -------
+        list
+            the pid parameters of the mixing chamber heater in the order [P, I, D]
+        """
+        pid = []
+        for j in ["p", "i", "d"]:
+            pid.append(float(self.get_mxc_heater_value(f"{self.pid_target}{j}")))
+
+        return pid
+
+    def set_mxc_heater_pid_config(
+        self, p: float = None, i: float = None, d: float = None
+    ) -> bool:
+        """
+        Set the pid parameters of the mixing chamber heater.
+
+        Parameters
+        ----------
+        p : float
+            Proportional parameter of PID control.
+        i : float
+            Integral parameter of PID control.
+        d : float
+            Derivative parameter of PID control.
+
+        Returns
+        -------
+        bool
+            True if the PID parameters were set successfully, False otherwise.
+        """
+        for j, k in zip([p, i, d], ["p", "i", "d"]):
+            if j is not None:
+                if not self.set_mxc_heater_value(f"{self.pid_target}{k}", j):
+                    return False
+
+        return True
+
+    # pressure gauges
+
+    def get_maxigauge_channel(self, channel: int) -> float:
+        """
+        Reads the pressure value of a Pfeiffer Maxigauge unit.
+
+        Parameters
+        ----------
+        channel : int
+            Channel of the desired gauge.
+
+        Returns
+        -------
+        float
+            Pressure of the requested gauge, in mbar.
+        """
+        if self._maxigauge_pressure:
+            data = self._get_value_request(
+                device="driver.maxigauge.pressures", target=f"p{channel}"
+            )
+            self.logger.debug(f"Requesting pressure from gauge P{channel}")
+            try:
+                return (
+                    float(
+                        self._get_value_from_data_response(
+                            data,
+                            device="driver.maxigauge.pressures",
+                            target=f"p{channel}",
+                        )
+                    )
+                    * 1e3
+                )
+            except KeyError as e:
+                raise APIError(data)
+
+        else:
+            raise Exception(
+                "Activate maxigauge reading toggle to read pressure values."
+            )
+    def set_parameter(self,parameter,value):
+        '''
+        Function to set mixing chamber temperature setpoint
+        '''
+        self.set_mxc_heater_setpoint(value)
+
+def BFtrigger_MXC_read(stop_event,starttime,q,trigger,barrier):
+    import requests
+    from requests.packages.urllib3.exceptions import InsecureRequestWarning
+    requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+    t0 = starttime
+    # Read credentials from python file
+    from Control_lib.drivers.BFcredentials import API_KEY, IP_ADDRESS, PORT_NUMBER, MXC_ID, HEATER_ID
+    # Initialize bluefors controller
+    controller = BlueFTController(ip=IP_ADDRESS, port=PORT_NUMBER, key=API_KEY, 
+                                    mixing_chamber_channel_id=MXC_ID, mixing_chamber_heater_id=HEATER_ID)  
+    while not stop_event.is_set():
+        # Read the MXC temperature
+        trigger.wait()
+        mxc_temp = controller.get_mxc_temperature()
+        # Put values to queue
+        q.put(np.array([[perf_counter()-t0],[mxc_temp]]))
+        barrier.wait()
+
+def BFcontinuous_MXC_read(stop_event,starttime,q):
+    import requests
+    from requests.packages.urllib3.exceptions import InsecureRequestWarning
+    requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+    t0 = starttime
+    # Read credentials from python file
+    from Control_lib.drivers.BFcredentials import API_KEY, IP_ADDRESS, PORT_NUMBER, MXC_ID, HEATER_ID
+    # Initialize bluefors controller
+    controller = BlueFTController(ip=IP_ADDRESS, port=PORT_NUMBER, key=API_KEY, 
+                                    mixing_chamber_channel_id=MXC_ID, mixing_chamber_heater_id=HEATER_ID)  
+    while not stop_event.is_set():
+        # Read the MXC temperature
+        mxc_temp = controller.get_mxc_temperature()
+        # Put values to queue
+        q.put(np.array([[perf_counter()-t0],[mxc_temp]]))
+
+    
+if __name__=='__main__':
+
+    # define required configuration
+    API_KEY = '7813ae93-31d7-4305-8e3b-8ded96422bc6'
+    IP_ADDRESS = '192.168.1.4'
+    PORT_NUMBER = 49098
+    MXC_ID = 6
+    HEATER_ID = 4
+    # create controller object
+    controller = BlueFTController(ip=IP_ADDRESS, port=PORT_NUMBER, key=API_KEY, 
+                                mixing_chamber_channel_id=MXC_ID, mixing_chamber_heater_id=HEATER_ID)
+
+    # read mixing chamber temperature in Kelvin
+    mxc_temp = controller.get_mxc_temperature()
+    controller.set_mxc_heater_power(1)
+    #print(mxc_temp) MATIAS COMMENTED THIS OUT, FEEL FREE TO DELETE

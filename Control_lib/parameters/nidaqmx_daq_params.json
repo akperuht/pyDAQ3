@@ -1,0 +1,138 @@
+{
+    "Device": "National Instruments DAQ",
+    "Settings": {
+        "Device": {
+            "toDialog": false,
+            "default": "NI-DAQmx",
+            "description": "National Instruments DAQ device using NI-DAQmx driver"
+        },
+        "Remote": {
+            "toDialog": false,
+            "default": false
+        },
+        "DAQ Device": {
+            "toDialog": true,
+            "default": "Dev1",
+            "values": [],
+            "type": "QComboBox"
+        },
+        "Channels": {
+            "toDialog": true,
+            "default": [
+                "ai0"
+            ],
+            "values": [],
+            "type": "QListWidget"
+        },
+        "Terminal configuration": {
+            "toDialog": true,
+            "default": "Differential",
+            "values": [
+                "Differential",
+                "RSE",
+                "NRSE",
+                "PseudoDifferential"
+            ],
+            "type": "QComboBox"
+        },
+        "Input range min [V]": {
+            "toDialog": true,
+            "default": -10.0,
+            "type": "QDoubleSpinBox"
+        },
+        "Input range max [V]": {
+            "toDialog": true,
+            "default": 10.0,
+            "type": "QDoubleSpinBox"
+        },
+        "Sampling mode": {
+            "toDialog": true,
+            "default": "Continuous",
+            "values": [
+                "Continuous",
+                "Finite",
+                "Hardware Timed Single Point"
+            ],
+            "type": "QComboBox"
+        },
+        "Sample rate [Hz]": {
+            "toDialog": true,
+            "default": 1000,
+            "minimum": 1,
+            "maximum": 1000000,
+            "type": "QSpinBox"
+        },
+        "Samples per channel": {
+            "toDialog": true,
+            "default": 1000,
+            "minimum": 1,
+            "maximum": 10000000,
+            "type": "QSpinBox"
+        },
+        "Read block size": {
+            "toDialog": true,
+            "default": 100,
+            "minimum": 1,
+            "maximum": 1000000,
+            "type": "QSpinBox"
+        },
+        "Input coupling": {
+            "toDialog": true,
+            "default": "DC",
+            "values": [
+                "DC",
+                "AC"
+            ],
+            "type": "QComboBox"
+        },
+        "Clock source": {
+            "toDialog": true,
+            "default": "Internal",
+            "values": [
+                "Internal",
+                "External"
+            ],
+            "type": "QComboBox"
+        },
+        "External clock terminal": {
+            "toDialog": true,
+            "default": "",
+            "type": "QLineEdit"
+        },
+        "Trigger type": {
+            "toDialog": true,
+            "default": "None",
+            "values": [
+                "None",
+                "Digital Edge",
+                "Analog Edge"
+            ],
+            "type": "QComboBox"
+        },
+        "Trigger source": {
+            "toDialog": true,
+            "default": "",
+            "type": "QLineEdit"
+        },
+        "Trigger edge": {
+            "toDialog": true,
+            "default": "Rising",
+            "values": [
+                "Rising",
+                "Falling"
+            ],
+            "type": "QComboBox"
+        },
+        "Buffer size": {
+            "toDialog": false,
+            "default": 10000,
+            "type": "QSpinBox"
+        },
+        "Units": {
+            "toDialog": false,
+            "default": "Volts",
+            "values": [],
+            "type": "QComboBox"
+        }
+    }
+}

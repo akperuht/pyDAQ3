@@ -1,0 +1,87 @@
+{
+  "Device": "Picowatt AVS-47 resistance bridge",
+  "Settings": {
+    "Device": {
+      "description": "Picowatt AVS-47 resistance bridge",
+      "default": "AVS-47",
+      "toDialog": false
+    },
+    "Remote": {
+      "default": true,
+      "toDialog": false
+    },
+    "Connection type": {
+      "default": "GPIB",
+      "values": [
+        "GPIB"
+      ],
+      "type": "QComboBox",
+      "toDialog": false
+    },
+    "GPIB channel": {
+      "default": "GPIB0::20::INSTR",
+      "values": [
+        "GPIB0::20::INSTR"
+      ],
+      "type": "QComboBox",
+      "toDialog": true
+    },
+    "Excitation": {
+      "default": 100,
+      "values": [
+        3,
+        10,
+        30,
+        100,
+        300,
+        1000,
+        3000
+      ],
+      "unit": "uV",
+      "type": "QComboBox",
+      "toDialog": true
+    },
+    "Range": {
+      "default": 200,
+      "values": [
+        0,
+        2,
+        20,
+        200,
+        2000,
+        20000,
+        200000,
+        2000000
+      ],
+      "unit": "Ohm",
+      "type": "QComboBox",
+      "Multiplier": "Multiply0.5",
+      "toDialog": true
+    },
+    "Input": {
+      "default": "Measure",
+      "values": [
+        "Zero",
+        "Measure",
+        "Calibrate"
+      ],
+      "type": "QComboBox",
+      "toDialog": true
+    },
+    "Channel": {
+      "default": 0,
+      "values": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "type": "QComboBox",
+      "toDialog": true
+    }
+  }
+}

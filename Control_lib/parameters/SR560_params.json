@@ -1,0 +1,135 @@
+{
+    "Device": "Stanford Research Systems SR560 Low Noise Voltage Preamplifier",
+    "Settings": {
+        "Device": {
+            "toDialog": false,
+            "default": "SRS SR560",
+            "description": "Low Noise Voltage Preamplifier"
+        },
+        "Remote": {
+            "toDialog": false,
+            "default": false
+        },
+        "Gain": {
+            "toDialog": true,
+            "default": 100,
+            "values": [
+                1,
+                2,
+                5,
+                10,
+                20,
+                50,
+                100,
+                200,
+                500,
+                1000,
+                2000,
+                5000,
+                10000,
+                20000,
+                50000
+            ],
+            "channelgain": true,
+            "type": "QComboBox",
+            "Multiplier": "Divide"
+        },
+        "Input Coupling": {
+            "toDialog": true,
+            "default": "DC",
+            "values": [
+                "GND",
+                "DC",
+                "AC"
+            ],
+            "type": "QComboBox"
+        },
+        "Input Source": {
+            "toDialog": true,
+            "default": "A",
+            "values": [
+                "A",
+                "A-B",
+                "B"
+            ],
+            "type": "QComboBox"
+        },
+        "Gain Mode": {
+            "toDialog": true,
+            "default": "Low Noise",
+            "values": [
+                "Low Noise",
+                "High Dynamic Reserve"
+            ],
+            "type": "QComboBox"
+        },
+        "Filter Mode": {
+            "toDialog": true,
+            "default": "Bypass",
+            "values": [
+                "Bypass",
+                "Low Pass",
+                "High Pass",
+                "Band Pass"
+            ],
+            "type": "QComboBox"
+        },
+        "High Pass Cutoff": {
+            "toDialog": true,
+            "default": "0.3 Hz",
+            "values": [
+                "0.03 Hz",
+                "0.1 Hz",
+                "0.3 Hz",
+                "1 Hz",
+                "3 Hz",
+                "10 Hz",
+                "30 Hz",
+                "100 Hz",
+                "300 Hz",
+                "1 kHz",
+                "3 kHz",
+                "10 kHz"
+            ],
+            "type": "QComboBox"
+        },
+        "Low Pass Cutoff": {
+            "toDialog": true,
+            "default": "10 kHz",
+            "values": [
+                "0.03 Hz",
+                "0.1 Hz",
+                "0.3 Hz",
+                "1 Hz",
+                "3 Hz",
+                "10 Hz",
+                "30 Hz",
+                "100 Hz",
+                "300 Hz",
+                "1 kHz",
+                "3 kHz",
+                "10 kHz",
+                "30 kHz",
+                "100 kHz",
+                "300 kHz",
+                "1 MHz"
+            ],
+            "type": "QComboBox"
+        },
+        "Invert Output": {
+            "toDialog": true,
+            "default": "Off",
+            "values": [
+                "Off",
+                "On"
+            ],
+            "type": "QComboBox"
+        },
+        "Output Unit": {
+            "toDialog": false,
+            "default": "Voltage",
+            "values": [],
+            "type": "QComboBox"
+        }
+    }
+}

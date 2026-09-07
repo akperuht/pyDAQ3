@@ -1,0 +1,96 @@
+{
+    "Device": "Liquid Instruments Moku:Go",
+    "Settings": {
+        "Remote": {
+            "toDialog": false,
+            "default": false
+        },
+        "Connection type": {
+            "toDialog": true,
+            "default": "IPv6 Address",
+            "values": [
+                "IPv4 Address",
+                "IPv6 Address",
+                "Hostname",
+                "Auto Discover"
+            ],
+            "type": "QComboBox"
+        },
+        "IPv4 Address": {
+            "toDialog": true,
+            "default": "169.254.176.185",
+            "description": "IPv4 address of the Moku:Go device",
+            "type": "QLineEdit"
+        },
+        "Hostname": {
+            "toDialog": false,
+            "default": "moku-go.local",
+            "description": "mDNS hostname of the Moku:Go device",
+            "type": "QLineEdit"
+        },
+        "IPv6 Address": {
+            "toDialog": true,
+            "default": "[fe80::7269:79ff:feb9:7b5e]",
+            "description": "Optional IPv6 address, e.g. fe80::1234:5678:abcd:ef01%Ethernet",
+            "type": "QLineEdit"
+        },
+        "Connection Timeout [s]": {
+            "toDialog": false,
+            "default": 10,
+            "type": "QSpinBox",
+            "minimum": 1,
+            "maximum": 300
+        },
+        "Instrument": {
+            "toDialog": false,
+            "default": "Datalogger",
+            "values": [
+                "Datalogger",
+                "Oscilloscope"
+            ],
+            "type": "QComboBox"
+        },
+        "Acquisition mode": {
+            "toDialog": true,
+            "default": "Precision",
+            "values": [
+                "Precision",
+                "Normal",
+                "Peak Detect"
+            ],
+            "type": "QComboBox"
+        },
+        "Sample rate [Hz]": {
+            "toDialog": true,
+            "default": 1000,
+            "type": "QSpinBox",
+            "minimum": 10,
+            "maximum": 1000000
+        },
+        "Number of samples": {
+            "toDialog": true,
+            "default": 1000,
+            "type": "QSpinBox",
+            "minimum": 10,
+            "maximum": 10000000
+        },
+        "Channels": {
+            "toDialog": true,
+            "default": [
+                "Input 1"
+            ],
+            "values": [
+                "Input 1",
+                "Input 2"
+            ],
+            "type": "QListWidget"
+        },
+        "Streaming duration [s]": {
+            "toDialog": true,
+            "default": 86400,
+            "type": "QSpinBox",
+            "minimum": 1,
+            "maximum": 86400
+        }
+    }
+}

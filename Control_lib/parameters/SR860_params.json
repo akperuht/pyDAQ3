@@ -1,0 +1,246 @@
+{
+    "Device": "SRS SR860 DSP Lock-in Amplifier",
+    "Settings": {
+        "Device": {
+            "toDialog": false,
+            "default": "SR860",
+            "description": "Stanford Research Systems SR860 Lock-in Amplifier"
+        },
+        "Remote": {
+            "toDialog": false,
+            "default": true
+        },
+        "Connection type": {
+        "default": "GPIB",
+        "values": [
+            "GPIB",
+            "IPv4"
+        ],
+        "type": "QComboBox",
+        "toDialog": false
+        },
+        "GPIB channel": {
+        "default": "TCPIP0::192.168.1.21::inst0::INSTR",
+        "values": [
+            "TCPIP0::192.168.1.21::inst0::INSTR"
+        ],
+        "type": "QComboBox",
+        "toDialog": true
+        },
+        "Reference source": {
+            "toDialog": true,
+            "default": "Internal",
+            "values": [
+                "Internal",
+                "External",
+                "Dual",
+                "Chop"
+            ],
+            "type": "QComboBox"
+        },
+        "Input configuration": {
+            "toDialog": true,
+            "default": "A",
+            "values": [
+               "A",
+               "A-B",
+               "I(1 Mohm)",
+               "I(100 Mohm)"
+            ],
+            "type": "QComboBox"
+        },
+        "Input coupling": {
+            "toDialog": true,
+            "default": "AC",
+            "values": [
+                "AC",
+                "DC"
+            ],
+            "type": "QComboBox"
+        },
+        "Input grounding": {
+            "toDialog": true,
+            "default": "Ground",
+            "values": [
+                "Float",
+                "Ground"
+            ],
+            "type": "QComboBox"
+        },
+        "Sine amplitude": {
+            "toDialog": true,
+            "unit": "V",
+            "default": 0.01,
+            "type": "QDoubleSpinBox",
+            "decimals":9,
+            "minimum": 0.0,
+            "maximum": 5
+        },
+        "Sine frequency": {
+            "toDialog": true,
+            "unit": "Hz",
+            "default": 17.348,
+            "type": "QDoubleSpinBox",
+            "decimals":6,
+            "minimum": 0.001,
+            "maximum": 102000
+        },
+        "Harmonic": {
+            "toDialog": true,
+            "default": 1,
+            "type": "QSpinBox",
+            "minimum": 1,
+            "maximum": 99
+        },
+        "Sensitivity": {
+            "toDialog": true,
+            "default": "1 V/uA",
+           "values": [
+            "1 nV/fA",
+            "2 nV/fA",
+            "5 nV/fA",
+            "10 nV/fA",
+            "20 nV/fA",
+            "50 nV/fA",
+            "100 nV/fA",
+            "200 nV/fA",
+            "500 nV/fA",
+            "1 uV/pA",
+            "2 uV/pA",
+            "5 uV/pA",
+            "10 uV/pA",
+            "20 uV/pA",
+            "50 uV/pA",
+            "100 uV/pA",
+            "200 uV/pA",
+            "500 uV/pA ",
+            "1 mV/nA",
+            "2 mV/nA",
+            "5 mV/nA",
+            "10 mV/nA",
+            "20 mV/nA",
+            "50 mV/nA",
+            "100 mV/nA",
+            "200 mV/nA",
+            "500 mV/nA",
+            "1 V/uA"
+            ],
+            "type": "QComboBox"
+        },
+        "Input range": {
+            "toDialog": true,
+            "default": "1 V",
+            "values": [
+                "10 mV",
+                "30 mV",
+                "100 mV",
+                "300 mV",
+                "1 V"
+            ],
+            "type": "QComboBox"
+        },
+        "Time constant": {
+            "toDialog": true,
+            "default": "100 ms",
+            "values": [
+                "1 us",
+                "3 us",
+                "10 us",
+                "30 us",
+                "100 us",
+                "300 us",
+                "1 ms",
+                "3 ms",
+                "10 ms",
+                "30 ms",
+                "100 ms",
+                "300 ms",
+                "1 s",
+                "3 s",
+                "10 s",
+                "30 s",
+                "100 s",
+                "300 s",
+                "1 ks",
+                "3 ks",
+                "10 ks",
+                "30 ks"
+            ],
+            "type": "QComboBox"
+        },
+        "Filter slope": {
+            "toDialog": true,
+            "default": "24 dB/oct",
+            "values": [
+                "6 dB/oct",
+                "12 dB/oct",
+                "18 dB/oct",
+                "24 dB/oct"
+            ],
+            "type": "QComboBox"
+        },
+        "Synchronous filter": {
+            "toDialog": true,
+            "default": false,
+            "type": "QCheckBox"
+        },
+        "Channels": {
+            "toDialog": true,
+            "default": [
+                "R",
+                "Theta"
+            ],
+            "values": [
+                "X",
+                "Y",
+                "R",
+                "Theta",
+                "Aux In 1",
+                "Aux In 2",
+                "Aux In 3",
+                "Aux In 4",
+                "X noise",
+                "Y noise"
+            ],
+            "type": "QListWidget"
+        },
+        "Acquisition mode": {
+            "toDialog": true,
+            "default": "Continuous",
+            "values": [
+                "Trigger",
+                "Continuous"
+            ],
+            "type": "QComboBox"
+        },
+        "Number of samples": {
+            "toDialog": true,
+            "default": 10,
+            "type": "QSpinBox",
+            "minimum": 1,
+            "maximum": 1250000
+        },
+        "DC offset": {
+            "toDialog": true,
+            "default": 0,
+            "type": "QDoubleSpinBox",
+            "minimum": 0,
+            "decimals":10,
+            "maximum": 10
+        },
+        "Capture buffer length": {
+            "toDialog": true,
+            "default": 256,
+            "type": "QSpinBox",
+            "minimum": 1,
+            "maximum": 4096
+        },
+        "Capture rate": {
+            "toDialog": true,
+            "default": 10,
+            "type": "QSpinBox",
+            "minimum": 0,
+            "maximum": 20
+        }
+    }
+}

@@ -1,0 +1,99 @@
+{
+    "Device": "AMI340",
+    "Settings": {
+        "Device": {
+            "toDialog": false,
+            "default": "AMI340",
+            "description": "American Magnetics Inc AMI340 magnet controller"
+        },
+        "Remote": {
+            "toDialog": false,
+            "default": true
+        },
+        "Connection type": {
+            "toDialog": true,
+            "default": "IPv4 Address",
+            "values": [
+                "IPv4 Address"
+            ],
+            "type": "QComboBox"
+        },
+        "IPv4 Address": {
+            "toDialog": true,
+            "default": "192.168.1.34",
+            "description": "IPv4 address of the AMI340",
+            "type": "QLineEdit"
+        },
+        "Connection Timeout [s]": {
+            "toDialog": false,
+            "default": 10,
+            "type": "QSpinBox",
+            "minimum": 1,
+            "maximum": 300
+        },
+        "Ramp rate": {
+            "toDialog": true,
+            "default": 0.0005,
+            "type": "QDoubleSpinBox",
+            "minimum": 0,
+            "maximum": 0.05,
+            "unit":"T/min",
+            "decimals":5
+        },
+        "Field target": {
+            "toDialog": true,
+            "default": 0,
+            "type": "QDoubleSpinBox",
+            "minimum": -7,
+            "maximum": 7,
+            "unit":"T",
+            "decimals":4
+        },
+        "Ramp to target": {
+            "toDialog": true,
+            "default": false,
+            "type": "QCheckBox"
+        },
+        "Parameter to sweep": {
+            "toDialog": true,
+            "default": "Magnetic field",
+            "values": [
+                "Magnetic field"
+            ],
+            "type": "QComboBox"
+        },
+        "Scan start": {
+            "toDialog": true,
+            "default": 0,
+            "type": "QDoubleSpinBox",
+            "minimum": -7,
+            "maximum": 7,
+            "unit":"Tesla",
+            "decimals":4
+        },
+        "Scan stop": {
+            "toDialog": true,
+            "default": 0,
+            "type": "QDoubleSpinBox",
+            "minimum": -7,
+            "maximum": 7,
+            "unit":"Tesla",
+            "decimals":4
+        },
+        "Points to scan": {
+            "toDialog": true,
+            "default": 1000,
+            "type": "QSpinBox",
+            "minimum": 1,
+            "maximum": 10000000
+        },
+        "Settling time": {
+            "toDialog": true,
+            "default": 0.1,
+            "type": "QDoubleSpinBox",
+            "minimum": 0,
+            "maximum": 10000,
+            "unit":"s"
+        }
+    }
+}

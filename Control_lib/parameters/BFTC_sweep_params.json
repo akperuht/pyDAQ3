@@ -1,0 +1,52 @@
+{
+  "Device": "Bluefors API temperature control",
+  "Settings": {
+    "Device": {
+      "description": "Bluefors API temperature control",
+      "default": "BF",
+      "toDialog": false
+    },
+    "Remote": {
+      "default": false,
+      "toDialog": false
+    },
+    "Parameter to sweep": {
+        "toDialog": true,
+        "default": "MXC heater",
+        "values": [
+            "MXC heater",
+            "Temperature"
+        ],
+        "type": "QComboBox"
+    },
+    "Scan start": {
+        "toDialog": true,
+        "default": 0,
+        "type": "QDoubleSpinBox",
+        "minimum": 0,
+        "maximum": 1
+    },
+    "Scan stop": {
+        "toDialog": true,
+        "default": 0,
+        "type": "QDoubleSpinBox",
+        "minimum": 0,
+        "maximum": 1
+    },
+    "Points to scan": {
+        "toDialog": true,
+        "default": 1000,
+        "type": "QSpinBox",
+        "minimum": 1,
+        "maximum": 10000000
+    },
+    "Settling time": {
+        "toDialog": true,
+        "default": 0.1,
+        "type": "QDoubleSpinBox",
+        "minimum": 0,
+        "maximum": 10000,
+        "unit":"s"
+    }
+  }
+}
