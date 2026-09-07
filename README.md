@@ -17,11 +17,11 @@ Version 2.2 is currently latest stable release tested to work in measurement PC:
 Version 2.3 is a development version using PySide6 (Qt6).
 
 <p align="center">
-  <img src="https://github.com/akperuht/PyDAQ/blob/main/doc/PyDAQv3_new.png" alt="Main UI" width="1000">
+  <img src="https://github.com/akperuht/PyDAQ3/blob/main/doc/PyDAQv3_new.png" alt="Main UI" width="1000">
 </p>
 
 <p align="center">
-  <img src="https://github.com/akperuht/PyDAQ/blob/main/doc/metadata_dialog.png" alt="Metadata dialog" width="300">
+  <img src="https://github.com/akperuht/PyDAQ3/blob/main/doc/metadata_dialog.png" alt="Metadata dialog" width="300">
 
 ## Other codes
 PyDAQmeas_1_2.py is legacy code for slow DAQ, without metadata generation and with limited hardware control.
